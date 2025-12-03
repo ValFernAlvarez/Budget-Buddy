@@ -8,103 +8,24 @@
 # include <iomanip>
 # include <limits>
 # include <algorithm>
-# include <map>
 # include <cstdlib>
+# include <cctype>
 
 // ----------------------- NAMESPACE Y ARCHIVO ----------------------
 using namespace std;
 const string nombre_archivo = "gastos.csv";
+
+
 // ----------------------- ESTRUCTURAS --------------------
 struct Gasto {
     double monto;
     char categoria[20];
     char fecha[12];
     char descripcion[50];
-    double monto;
 };
 
-// ----------------------- FUNCIONES ----------------------
-void limpiarBuffer() {
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-}
 
-void registrarGasto(vector<Gasto>& gastos) {
-    string descripcion, categoria;
-    double monto;
-
-    limpiarBuffer();
-    cout << "Ingrese la descripcion del gasto: ";
-    getline(cin, descripcion);
-
-    if (descripcion.empty()) {
-        cout << "La descripcion no puede estar vacia.\n";
-        return;
-    }
-
-    cout << "Ingrese la categoria del gasto: ";
-    getline(cin, categoria);
-
-    if (categoria.empty()) {
-        cout << "La categoria no puede estar vacia.\n";
-        return;
-    }
-
-    cout << "Ingrese el monto del gasto: ";
-    cin >> monto;
-
-    if (!cin || monto <= 0) {
-        cout << "Monto invalido. Debe ser mayor a 0.\n";
-        cin.clear();
-        limpiarBuffer();
-        return;
-    }
-
-    gastos.push_back({descripcion, categoria, monto});
-    cout << "Gasto registrado exitosamente!\n";
-}
-
-void mostrarGastos(const vector<Gasto>& gastos) {
-    cout << "\nLista de gastos:\n";
-
-    if (gastos.empty()) {
-        cout << "(No hay gastos registrados)\n";
-        return;
-    }
-
-    for (const auto& g : gastos) {
-        cout << "Descripcion: " << g.descripcion
-             << " | Categoria: " << g.categoria
-             << " | Monto: " << g.monto << endl;
-    }
-}
-
-void eliminarGasto(vector<Gasto>& gastos) {
-    if (gastos.empty()) {
-        cout << "No hay gastos para eliminar\n";
-        return;
-    }
-
-    string desc;
-    limpiarBuffer();
-    cout << "Ingrese la descripcion del gasto a eliminar: ";
-    getline(cin, desc);
-
-    if (desc.empty()) {
-        cout << "La descripcion no puede estar vacia.\n";
-        return;
-    }
-
-    auto it = find_if(gastos.begin(), gastos.end(),
-                      [&](const Gasto& g) { return g.descripcion == desc; });
-
-    if (it != gastos.end()) {
-        gastos.erase(it);
-        cout << "Gasto eliminado correctamente!\n";
-    } else {
-        cout << "No se encontro un gasto con esa descripcion.\n";
-    }
-}
-
+// ----------------------- FUNCIONES BASICAS --------------------
 void pausa() {
     system("pause");
 }
@@ -113,37 +34,11 @@ void borrar_pantalla() {
     system("cls");
 }
 
-// ----------------------- MENU DE OPCIONES ---------------
-int main() {
-    vector<Gasto> gastos;
-    int opcion;
-
-    while (true) {
-        cout << "\n Bienvenido a Budget Buddy, que desea hacer?\n";
-        cout << "1. Registrar gasto\n";
-        cout << "2. Mostrar gastos\n";
-        cout << "3. Eliminar gastos\n";
-        //cout << "4. Reporte por categoria\n";
-        cout << "5. Salir\n";
-        cout << "Seleccione una opcion: ";
-        cin >> opcion;
-
-        switch (opcion) {
-            case 1: registrarGasto(gastos); pausa(); break;
-            case 2: mostrarGastos(gastos); pausa(); break;
-            case 3: eliminarGasto(gastos); pausa(); break;
-            //case 4: reportePorCategoria(); pausa(); break;
-            case 5:
-                cout << "Saliendo del programa... Hasta pronto!\n";
-                pausa();
-                return 0;
-            default:
-                cout << "Opcion no valida\n";
-        }
-    }
+void limpiar_buffer() {
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
-// ----------------------- FUNCIONES CSV ------------------
+// ----------------------- FUNCIONES CSV ------------------------
 void cargar_csv(vector<Gasto>& gastos) {
     ifstream archivo(nombre_archivo);
     // --------------------------------
@@ -154,6 +49,7 @@ void cargar_csv(vector<Gasto>& gastos) {
     // ---------------------------------
     char linea[256]; 
     archivo.getline(linea, sizeof(linea)); 
+    archivo.getline(linea, sizeof(linea));
     // ---------------------------------
     while (archivo.getline(linea, sizeof(linea))) {
         if (linea[0] =='\0')
@@ -177,10 +73,10 @@ void cargar_csv(vector<Gasto>& gastos) {
         strncpy(campo_monto, linea, len1);
         campo_monto[len1]='\0';
         int len2=p2-(p1+1);
-        strncpy(campo_categoria, p1+1, len1);
+        strncpy(campo_categoria, p1+1, len2);
         campo_categoria[len2]='\0';
         int len3=p3-(p2+1);
-        strncpy(campo_fecha, p2+1, len1);
+        strncpy(campo_fecha, p2+1, len3);
         campo_fecha[len3]='\0';
         strcpy(campo_desc, p3+1);
         // ---------------------------------
@@ -202,11 +98,11 @@ void cargar_csv(vector<Gasto>& gastos) {
 void guardarCSV(const vector<Gasto>& gastos) {
     ofstream archivo(nombre_archivo.c_str());
     if (!archivo.is_open()) {
-        cout << "\nError writing CSV.";
+        cout<<"\nError escribiendo CSV.\n";
         return;
     }
     // ---------------------------------
-    archivo << "monto,categoria,fecha,descripcion\n";
+    archivo <<"\nEJEMPLO: monto,categoria,fecha,descripcion\n";
     // ---------------------------------
     for (const auto& g : gastos) {
         archivo<<g.monto<<","
@@ -218,3 +114,365 @@ void guardarCSV(const vector<Gasto>& gastos) {
     archivo.close();
 }
 
+// ---------------- FUNCION VALIDAR FECHA -----------------
+
+bool validar_fecha(const char fecha[]) {
+    if (strlen(fecha)!=10)
+        return false;
+    if (fecha[2]!='/' || fecha[5]!='/')
+        return false;
+    for (int i=0 ; i<10 ; ++i) {
+        if (i==2 || i==5)
+            continue;
+        if (!isdigit(static_cast<unsigned char>(fecha[i])))
+            return false;
+    }
+    int dia=(fecha[0] - '0') * 10 + (fecha[1] - '0');
+    int mes=(fecha[3] - '0') * 10 + (fecha[4] - '0');
+    if (mes < 1 || mes > 12)
+        return false;
+    if (dia < 1 || dia > 31)
+        return false;
+    return true;
+}
+
+// ----------------------- FUNCIONES ----------------------
+
+
+void registrar_gasto(vector<Gasto>& gastos) {
+    limpiar_buffer();
+    Gasto g;
+    // ---------------------------------
+    cout << "Monto: ";
+    cin >> g.monto;
+    if (!cin || g.monto <= 0) {
+        cout << "\nMonto invalido. Debe ser mayor a 0.\n";
+        cin.clear();
+        limpiar_buffer();
+        return;
+    }
+    limpiar_buffer();
+    // ---------------------------------
+    bool error_categoria=true;
+    while (error_categoria){
+        cout<<"Categoria (sin comas): ";
+        cin.getline(g.categoria, sizeof(g.categoria));
+        if (g.categoria [0]=='\0'){
+            cout<<"La categoria no puede estar vacia.\n";
+            continue;
+        }
+        bool tiene_coma=false;
+        for (int i=0 ; g.categoria[i]!='\0' ; ++i) {
+            if (g.categoria[i]==',') {
+                tiene_coma=true;
+                break;
+            }
+        }
+        if (tiene_coma) 
+            cout<<"\nLa categoría no puede contener comas (,) por el CSV.\n";
+        else 
+            error_categoria=false;
+    }
+    // ---------------------------------
+    bool error_fecha=true;
+    while (error_fecha) {
+        cout<<"Fecha (dd/mm/aaaa): ";
+        cin.getline(g.fecha, sizeof(g.fecha));
+
+        if (!validar_fecha(g.fecha)) {
+            cout<<"Fecha invalida. Use formato dd/mm/aaaa.\n";
+        } else {
+            error_fecha=false;
+        }
+    }
+    // ---------------------------------
+    bool error_descripcion=true;
+    while (error_descripcion){
+        cout<<"Descripcion (sin comas): ";
+        cin.getline(g.descripcion, sizeof(g.descripcion));
+        if (g.descripcion [0]=='\0'){
+            cout<<"\nLa descripcion no puede estar vacia.\n";
+            continue;
+        }
+        bool tiene_coma=false;
+        for (int i=0 ; g.descripcion[i]!='\0' ; ++i) {
+            if (g.descripcion[i]==',') {
+                tiene_coma=true;
+                break;
+            }
+        }
+        if (tiene_coma) 
+            cout<<"\nLa descripcion no puede contener comas (,) por el CSV.\n";
+        else 
+            error_descripcion=false;
+    }
+    
+    // ---------------------------------
+    gastos.push_back(g);
+    guardarCSV(gastos);
+    cout<<"\nGasto registrado exitosamente.\n";
+}
+
+// ---------------------------------
+
+void mostrar_gastos(const vector<Gasto>& gastos) {
+    borrar_pantalla();
+    if (gastos.empty()) {
+        cout << "\nNo hay gastos registrados.\n";
+        pausa();
+        return;
+    }
+    // ---------------------------------
+    cout<<"\nLista de gastos:\n";
+    cout<<left<< setw(5)<<"#"<<setw(12)<<"Monto"<<setw(15)<<"Categoria"<<setw(12)<<"Fecha"<<"Descripcion\n";
+    cout<<"==============================================================\n";
+    // ---------------------------------
+    for (size_t i=0; i<gastos.size(); ++i) {
+        cout <<left<<setw(5)<<i
+        <<setw(12)<<fixed<<setprecision(2)<<gastos[i].monto
+        <<setw(15)<<gastos[i].categoria
+        <<setw(12)<<gastos[i].fecha
+        <<gastos[i].descripcion << "\n";
+    }
+}
+
+
+// ---------------------------------
+
+void eliminar_gasto(vector<Gasto>& gastos) {
+    borrar_pantalla();
+    if (gastos.empty()) {
+        cout<<"\nNo hay gastos para eliminar.\n";
+        pausa();
+        return;
+    }
+    // ---------------------------------
+    mostrar_gastos(gastos);
+    borrar_pantalla();
+    // ---------------------------------
+    cout << "\nIngrese el indice del gasto a eliminar: ";
+    size_t indice;
+    // ---------------------------------
+    if (!(cin>>indice) || indice>=gastos.size()) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout<<"\nIndice invalido.\n";
+        return;
+    }
+    // ---------------------------------
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    // ---------------------------------
+    gastos.erase(gastos.begin()+indice);
+    guardarCSV(gastos);
+    // ---------------------------------
+    cout<<"\nGasto eliminado.\n";
+}
+
+// ---------------------------------
+
+void reporte_por_categoria(const vector<Gasto>& gastos) {
+    borrar_pantalla();
+    if (gastos.empty()) {
+        cout << "\nNo hay datos para generar el reporte por categoria.";
+        pausa();
+        return;
+    }
+    const int MAX_CAT = 100;
+    char categorias[MAX_CAT][20];
+    double totales[MAX_CAT];
+    int num_categorias = 0;
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        bool encontrada = false;
+        int pos = -1;
+        for (int j = 0; j < num_categorias; ++j) {
+            if (strcmp(categorias[j], gastos[i].categoria) == 0) {
+                encontrada = true;
+                pos = j;
+                break;
+            }
+        }
+        if (encontrada) {
+            totales[pos] += gastos[i].monto;
+        } else {
+            if (num_categorias < MAX_CAT) {
+                strcpy(categorias[num_categorias], gastos[i].categoria);
+                totales[num_categorias] = gastos[i].monto;
+                num_categorias++;
+            } else {
+                cout << "\nSe alcanzo el maximo de categorias en el reporte.";
+                break;
+            }
+        }
+    }
+    double total_general = 0.0;
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        total_general += gastos[i].monto;
+    }
+    cout << "\nREPORTE POR CATEGORIA\n";
+    cout << "======================================================\n";
+    cout << left << setw(15) << "Categoria"
+         << setw(12) << "Total"
+         << "Porcentaje\n";
+    cout << "------------------------------------------------------\n";
+    for (int i = 0; i < num_categorias; ++i) {
+        double porcentaje = (totales[i] / total_general) * 100.0;
+        cout << left << setw(15) << categorias[i]<< setw(12) << fixed << setprecision(2) << totales[i]<< fixed << setprecision(2) << porcentaje << " %\n";
+    }
+    cout << "\nTotal general: " << fixed << setprecision(2) << total_general << "\n";
+}
+
+// ---------------------------------
+
+void reporte_por_fecha(const vector<Gasto>& gastos) {
+    borrar_pantalla();
+    if (gastos.empty()) {
+        cout << "\nNo hay datos para generar el reporte por fecha.";
+        pausa();
+        return;
+    }
+    const int MAX_FECHAS = 200;
+    char fechas[MAX_FECHAS][12];
+    double totales[MAX_FECHAS];
+    int num_fechas = 0;
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        bool encontrada = false;
+        int pos = -1;
+        for (int j = 0; j < num_fechas; ++j) {
+            if (strcmp(fechas[j], gastos[i].fecha) == 0) {
+                encontrada = true;
+                pos = j;
+                break;
+            }
+        }
+        if (encontrada) {
+            totales[pos] += gastos[i].monto;
+        } else {
+            if (num_fechas < MAX_FECHAS) {
+                strcpy(fechas[num_fechas], gastos[i].fecha);
+                totales[num_fechas] = gastos[i].monto;
+                num_fechas++;
+            } else {
+                cout << "\nSe alcanzo el maximo de categorias en el reporte.";
+                break;
+            }
+        }
+    }
+    double total_general = 0.0;
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        total_general += gastos[i].monto;
+    }
+    cout << "\nREPORTE POR FECHA\n";
+    cout << "======================================================\n";
+    cout << left << setw(15) << "Categoria"
+         << setw(12) << "Total"
+         << "Porcentaje\n";
+    cout << "------------------------------------------------------\n";
+    for (int i = 0; i < num_fechas; ++i) {
+        double porcentaje = (totales[i] / total_general) * 100.0;
+        cout << left << setw(15) << fechas[i]<< setw(12) << fixed << setprecision(2) << totales[i]<< fixed << setprecision(2) << porcentaje << " %\n";
+    }
+    cout << "\nTotal general: " << fixed << setprecision(2) << total_general << "\n";
+}
+
+
+
+void reporte_por_mes(const vector<Gasto>& gastos) {
+    borrar_pantalla();
+    if (gastos.empty()) {
+        cout << "\nNo hay datos para generar el reporte por mes.";
+        pausa();
+        return;
+    }
+
+    const int MAX_MESES = 200;
+    char meses[MAX_MESES][8]; 
+    double totales_mes[MAX_MESES];
+    int num_meses = 0;
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        char mes_actual[8];
+        strncpy(mes_actual, gastos[i].fecha + 3, 7);
+        mes_actual[7] = '\0';
+        bool encontrado = false;
+        int pos = -1;
+        for (int j = 0; j < num_meses; ++j) {
+            if (strcmp(meses[j], mes_actual) == 0) {
+                encontrado = true;
+                pos = j;
+                break;
+            }
+        }
+
+        if (encontrado) {
+            totales_mes[pos] += gastos[i].monto;
+        } else {
+            if (num_meses < MAX_MESES) {
+                strcpy(meses[num_meses], mes_actual);
+                totales_mes[num_meses] = gastos[i].monto;
+                num_meses++;
+            } else {
+                cout << "\nSe alcanzo el maximo de meses en el reporte.";
+                break;
+            }
+        }
+    }
+        double total_general = 0.0;
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        total_general += gastos[i].monto;
+    }
+    cout << "\nREPORTE POR MES\n";
+    cout << "===========================================================\n";
+    cout << left << setw(10) << "Mes"
+         << setw(12) << "Total"
+         << "Porcentaje\n";
+    cout << "-----------------------------------------------------------\n";
+    for (int i = 0; i < num_meses; ++i) {
+        double porcentaje = (totales_mes[i] / total_general) * 100.0;
+        cout << left << setw(10) << meses[i]<< setw(12) << fixed << setprecision(2) << totales_mes[i]<< fixed << setprecision(2) << porcentaje << " %\n";
+    }
+    cout << "\nTotal general: " << fixed << setprecision(2) << total_general << "\n";
+}
+
+
+
+// ----------------------- MENU DE OPCIONES ---------------
+int main() {
+    vector<Gasto> gastos;
+    cargar_csv(gastos);
+    int opcion;
+    // ---------------------------------
+    while (true) {
+        cout<< "\n Bienvenido a Budget Buddy, que desea hacer?\n";
+        cout<< "1. Registrar gasto\n";
+        cout<< "2. Mostrar gastos\n";
+        cout<< "3. Eliminar gastos\n";
+        cout<< "4. Reporte por categoria\n";
+        cout<<"5. Reporte por fecha.\n";
+        cout<<"6. Reporte por mes.\n";
+        cout<< "7. Salir\n";
+        cout<< "Seleccione una opcion: ";
+        cin>> opcion;
+        // ---------------------------------
+        if (!cin) {
+            cin.clear();
+            limpiar_buffer();
+            cout << "\nOpcion no valida.\n";
+            continue;
+        }
+        // ---------------------------------
+        switch (opcion) {
+            case 1: registrar_gasto(gastos); pausa(); break;
+            case 2: mostrar_gastos(gastos); pausa(); break;
+            case 3: eliminar_gasto(gastos); pausa(); break;
+            case 4: reporte_por_categoria(gastos); pausa(); break;
+            case 5: reporte_por_fecha(gastos); pausa(); break;
+            case 6: reporte_por_mes(gastos); pausa(); break;
+            case 7:
+                cout<<"\nSaliendo del programa... Hasta pronto!\n";
+                pausa();
+                return 0;
+            default:
+                cout<<"\nOpcion no valida\n";
+        }
+        // ---------------------------------
+    }
+}
