@@ -500,20 +500,20 @@ void reporte_por_semana(const vector<Gasto>& gastos) {
         return;
     }
     
-    auto extraer_fecha = [](const char fecha[], int& dia, int& mes, int& anio) {
+    auto extraer_fecha = [](const char fecha[], int& dia, int& mes, int& ano) {
 
         dia = (fecha[0] - '0') * 10 + (fecha[1] - '0');
         mes = (fecha[3] - '0') * 10 + (fecha[4] - '0');
-        anio = (fecha[6] - '0') * 1000 + 
+        ano = (fecha[6] - '0') * 1000 + 
                (fecha[7] - '0') * 100 + 
                (fecha[8] - '0') * 10 + 
                (fecha[9] - '0');
     };
     
-    auto dia_juliano = [](int dia, int mes, int anio) {
+    auto dia_juliano = [](int dia, int mes, int ano) {
         int dias_mes[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
         
-        if ((anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0)) {
+        if ((ano % 4 == 0 && ano % 100 != 0) || (ano % 400 == 0)) {
             dias_mes[1] = 29;
         }
         
@@ -527,7 +527,7 @@ void reporte_por_semana(const vector<Gasto>& gastos) {
     
     const int MAX_SEMANAS = 53; 
     struct SemanaInfo {
-        int anio;
+        int ano;
         int numero_semana;
         double total;
     };
@@ -536,16 +536,16 @@ void reporte_por_semana(const vector<Gasto>& gastos) {
     int num_semanas = 0;
     
     for (size_t i = 0; i < gastos.size(); ++i) {
-        int dia, mes, anio;
-        extraer_fecha(gastos[i].fecha, dia, mes, anio);
+        int dia, mes, ano;
+        extraer_fecha(gastos[i].fecha, dia, mes, ano);
         
-        int dia_del_anio = dia_juliano(dia, mes, anio);
-        int numero_semana = (dia_del_anio - 1) / 7 + 1;
+        int dia_del_ano = dia_juliano(dia, mes, ano);
+        int numero_semana = (dia_del_ano - 1) / 7 + 1;
 
         bool encontrada = false;
         int pos = -1;
         for (int j = 0; j < num_semanas; ++j) {
-            if (semanas[j].anio == anio && semanas[j].numero_semana == numero_semana) {
+            if (semanas[j].ano == ano && semanas[j].numero_semana == numero_semana) {
                 encontrada = true;
                 pos = j;
                 break;
@@ -556,7 +556,7 @@ void reporte_por_semana(const vector<Gasto>& gastos) {
             semanas[pos].total += gastos[i].monto;
         } else {
             if (num_semanas < MAX_SEMANAS) {
-                semanas[num_semanas].anio = anio;
+                semanas[num_semanas].ano = ano;
                 semanas[num_semanas].numero_semana = numero_semana;
                 semanas[num_semanas].total = gastos[i].monto;
                 num_semanas++;
@@ -582,7 +582,7 @@ void reporte_por_semana(const vector<Gasto>& gastos) {
     
     for (int i = 0; i < num_semanas; ++i) {
         double porcentaje = (semanas[i].total / total_general) * 100.0;
-        cout << left << setw(10) << semanas[i].anio
+        cout << left << setw(10) << semanas[i].ano
              << setw(10) << semanas[i].numero_semana
              << setw(12) << fixed << setprecision(2) << semanas[i].total
              << fixed << setprecision(2) << porcentaje << " %\n";
