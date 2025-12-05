@@ -432,7 +432,166 @@ void reporte_por_mes(const vector<Gasto>& gastos) {
     cout << "\nTotal general: " << fixed << setprecision(2) << total_general << "\n";
 }
 
+void reporte_por_dia(const vector<Gasto>& gastos) {
+    borrar_pantalla();
+    if (gastos.empty()) {
+        cout << "\nNo hay datos para generar el reporte por día.\n";
+        pausa();
+        return;
+    }
+    
+    const int MAX_DIAS = 365; 
+    char dias[MAX_DIAS][12]; 
+    double totales[MAX_DIAS] = {0}; 
+    int num_dias = 0; 
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        bool encontrado = false;
+        int pos = -1;
 
+        for (int j = 0; j < num_dias; ++j) {
+            if (strcmp(dias[j], gastos[i].fecha) == 0) {
+                encontrado = true;
+                pos = j;
+                break;
+            }
+        }
+        
+        if (encontrado) {
+            totales[pos] += gastos[i].monto;
+        } else {
+            if (num_dias < MAX_DIAS) {
+                strcpy(dias[num_dias], gastos[i].fecha);
+                totales[num_dias] = gastos[i].monto;
+                num_dias++;
+            } else {
+                cout << "\nSe alcanzó el máximo de días en el reporte.\n";
+                break;
+            }
+        }
+    }
+    double total_general = 0.0;
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        total_general += gastos[i].monto;
+    }
+    
+    cout << "\nREPORTE POR DÍA\n";
+    cout << "======================================================\n";
+    cout << left << setw(15) << "Fecha"
+         << setw(12) << "Total"
+         << "Porcentaje\n";
+    cout << "------------------------------------------------------\n";
+    
+    for (int i = 0; i < num_dias; ++i) {
+        double porcentaje = (totales[i] / total_general) * 100.0;
+        cout << left << setw(15) << dias[i]
+             << setw(12) << fixed << setprecision(2) << totales[i]
+             << fixed << setprecision(2) << porcentaje << " %\n";
+    }
+    
+    cout << "\nTotal general: " << fixed << setprecision(2) << total_general << "\n";
+    cout << "Días con gastos registrados: " << num_dias << "\n";
+}
+
+void reporte_por_semana(const vector<Gasto>& gastos) {
+    borrar_pantalla();
+    if (gastos.empty()) {
+        cout << "\nNo hay datos para generar el reporte por semana.\n";
+        pausa();
+        return;
+    }
+    
+    auto extraer_fecha = [](const char fecha[], int& dia, int& mes, int& anio) {
+
+        dia = (fecha[0] - '0') * 10 + (fecha[1] - '0');
+        mes = (fecha[3] - '0') * 10 + (fecha[4] - '0');
+        anio = (fecha[6] - '0') * 1000 + 
+               (fecha[7] - '0') * 100 + 
+               (fecha[8] - '0') * 10 + 
+               (fecha[9] - '0');
+    };
+    
+    auto dia_juliano = [](int dia, int mes, int anio) {
+        int dias_mes[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        
+        if ((anio % 4 == 0 && anio % 100 != 0) || (anio % 400 == 0)) {
+            dias_mes[1] = 29;
+        }
+        
+        int total = 0;
+        for (int i = 0; i < mes - 1; i++) {
+            total += dias_mes[i];
+        }
+        total += dia;
+        return total;
+    };
+    
+    const int MAX_SEMANAS = 53; 
+    struct SemanaInfo {
+        int anio;
+        int numero_semana;
+        double total;
+    };
+    
+    SemanaInfo semanas[MAX_SEMANAS];
+    int num_semanas = 0;
+    
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        int dia, mes, anio;
+        extraer_fecha(gastos[i].fecha, dia, mes, anio);
+        
+        int dia_del_anio = dia_juliano(dia, mes, anio);
+        int numero_semana = (dia_del_anio - 1) / 7 + 1;
+
+        bool encontrada = false;
+        int pos = -1;
+        for (int j = 0; j < num_semanas; ++j) {
+            if (semanas[j].anio == anio && semanas[j].numero_semana == numero_semana) {
+                encontrada = true;
+                pos = j;
+                break;
+            }
+        }
+        
+        if (encontrada) {
+            semanas[pos].total += gastos[i].monto;
+        } else {
+            if (num_semanas < MAX_SEMANAS) {
+                semanas[num_semanas].anio = anio;
+                semanas[num_semanas].numero_semana = numero_semana;
+                semanas[num_semanas].total = gastos[i].monto;
+                num_semanas++;
+            } else {
+                cout << "\nSe alcanzó el máximo de semanas en el reporte.\n";
+                break;
+            }
+        }
+    }
+    
+    double total_general = 0.0;
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        total_general += gastos[i].monto;
+    }
+
+    cout << "\nREPORTE POR SEMANA\n";
+    cout << "======================================================\n";
+    cout << left << setw(10) << "Año"
+         << setw(10) << "Semana"
+         << setw(12) << "Total"
+         << "Porcentaje\n";
+    cout << "------------------------------------------------------\n";
+    
+    for (int i = 0; i < num_semanas; ++i) {
+        double porcentaje = (semanas[i].total / total_general) * 100.0;
+        cout << left << setw(10) << semanas[i].anio
+             << setw(10) << semanas[i].numero_semana
+             << setw(12) << fixed << setprecision(2) << semanas[i].total
+             << fixed << setprecision(2) << porcentaje << " %\n";
+    }
+    
+    cout << "\nTotal general: " << fixed << setprecision(2) << total_general << "\n";
+    cout << "Semanas con gastos registrados: " << num_semanas << "\n";
+    cout << "\nNota: La semana 1 comienza el 1 de enero de cada año.\n";
+}
 
 // ----------------------- MENU DE OPCIONES ---------------
 int main() {
@@ -440,17 +599,21 @@ int main() {
     cargar_csv(gastos);
     int opcion;
     // ---------------------------------
+   
     while (true) {
         cout<< "\n Bienvenido a Budget Buddy, que desea hacer?\n";
         cout<< "1. Registrar gasto\n";
         cout<< "2. Mostrar gastos\n";
         cout<< "3. Eliminar gastos\n";
         cout<< "4. Reporte por categoria\n";
-        cout<<"5. Reporte por fecha.\n";
-        cout<<"6. Reporte por mes.\n";
-        cout<< "7. Salir\n";
+        cout<< "5. Reporte por fecha\n";
+        cout<< "6. Reporte por mes\n";
+        cout<< "7. Reporte por dia\n";
+        cout<< "8. Reporte por semana\n";
+        cout<< "9. Salir\n";
         cout<< "Seleccione una opcion: ";
         cin>> opcion;
+        
         // ---------------------------------
         if (!cin) {
             cin.clear();
@@ -466,7 +629,9 @@ int main() {
             case 4: reporte_por_categoria(gastos); pausa(); break;
             case 5: reporte_por_fecha(gastos); pausa(); break;
             case 6: reporte_por_mes(gastos); pausa(); break;
-            case 7:
+            case 7: reporte_por_dia(gastos); pausa(); break;
+            case 8: reporte_por_semana(gastos); pausa(); break;
+            case 9:
                 cout<<"\nSaliendo del programa... Hasta pronto!\n";
                 pausa();
                 return 0;
