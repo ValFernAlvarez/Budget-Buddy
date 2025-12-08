@@ -269,60 +269,6 @@ void eliminar_gasto(vector<Gasto>& gastos) {
 }
 
 // ---------------------------------
-
-void reporte_por_categoria(const vector<Gasto>& gastos) {
-    borrar_pantalla();
-    if (gastos.empty()) {
-        cout << "\nNo hay datos para generar el reporte por categoria.";
-        pausa();
-        return;
-    }
-    const int MAX_CAT = 100;
-    char categorias[MAX_CAT][20];
-    double totales[MAX_CAT];
-    int num_categorias = 0;
-    for (size_t i = 0; i < gastos.size(); ++i) {
-        bool encontrada = false;
-        int pos = -1;
-        for (int j = 0; j < num_categorias; ++j) {
-            if (strcmp(categorias[j], gastos[i].categoria) == 0) {
-                encontrada = true;
-                pos = j;
-                break;
-            }
-        }
-        if (encontrada) {
-            totales[pos] += gastos[i].monto;
-        } else {
-            if (num_categorias < MAX_CAT) {
-                strcpy(categorias[num_categorias], gastos[i].categoria);
-                totales[num_categorias] = gastos[i].monto;
-                num_categorias++;
-            } else {
-                cout << "\nSe alcanzo el maximo de categorias en el reporte.";
-                break;
-            }
-        }
-    }
-    double total_general = 0.0;
-    for (size_t i = 0; i < gastos.size(); ++i) {
-        total_general += gastos[i].monto;
-    }
-    cout << "\nREPORTE POR CATEGORIA\n";
-    cout << "======================================================\n";
-    cout << left << setw(15) << "Categoria"
-         << setw(12) << "Total"
-         << "Porcentaje\n";
-    cout << "------------------------------------------------------\n";
-    for (int i = 0; i < num_categorias; ++i) {
-        double porcentaje = (totales[i] / total_general) * 100.0;
-        cout << left << setw(15) << categorias[i]<< setw(12) << fixed << setprecision(2) << totales[i]<< fixed << setprecision(2) << porcentaje << " %\n";
-    }
-    cout << "\nTotal general: " << fixed << setprecision(2) << total_general << "\n";
-}
-
-// ---------------------------------
-
 void reporte_por_fecha(const vector<Gasto>& gastos) {
     borrar_pantalla();
     if (gastos.empty()) {
@@ -330,6 +276,78 @@ void reporte_por_fecha(const vector<Gasto>& gastos) {
         pausa();
         return;
     }
+
+    int opcion = 0;
+    cout << "Seleccione opcion:\n";
+    cout << "1. Ver todas las fechas\n";
+    cout << "2. Ver fecha especifica\n";
+    cout << "Opcion: ";
+    cin >> opcion;
+    limpiar_buffer();
+
+    if (opcion == 2) {
+        char fecha[12];
+        bool error_fecha = true;
+        while (error_fecha) {
+            cout << "Ingrese la fecha (dd/mm/aaaa): ";
+            cin.getline(fecha, sizeof(fecha));
+            if (!validar_fecha(fecha)) {
+                cout << "Fecha invalida. Use formato dd/mm/aaaa.\n";
+            } else {
+                error_fecha = false;
+            }
+        }
+
+        char categoria[20];
+        cout << "Ingrese la categoria (dejar vacio para todas): ";
+        cin.getline(categoria, sizeof(categoria));
+
+        const int MAX_GASTOS = 100;
+        char descripciones[MAX_GASTOS][50];
+        double montos[MAX_GASTOS];
+        int num_gastos = 0;
+        double total_general = 0.0;
+
+        for (size_t i = 0; i < gastos.size(); ++i) {
+            if (strcmp(gastos[i].fecha, fecha) == 0 &&
+                (categoria[0] == '\0' || strcmp(gastos[i].categoria, categoria) == 0)) {
+                if (num_gastos < MAX_GASTOS) {
+                    strcpy(descripciones[num_gastos], gastos[i].descripcion);
+                    montos[num_gastos] = gastos[i].monto;
+                    total_general += gastos[i].monto;
+                    num_gastos++;
+                }
+            }
+        }
+
+        if (num_gastos == 0) {
+            cout << "\nNo se encontraron gastos para esa fecha/categoria.\n";
+            pausa();
+            return;
+        }
+
+        cout << "\nREPORTE DE GASTOS DEL " << fecha;
+        if (categoria[0] != '\0') cout << " | Categoria: " << categoria;
+        cout << "\n===========================================\n";
+        cout << left << setw(5) << "#"
+             << setw(30) << "Descripcion"
+             << setw(12) << "Monto"
+             << "Porcentaje\n";
+        cout << "-------------------------------------------\n";
+
+        for (int i = 0; i < num_gastos; ++i) {
+            double porcentaje = (montos[i] / total_general) * 100.0;
+            cout << left << setw(5) << i + 1
+                 << setw(30) << descripciones[i]
+                 << setw(12) << fixed << setprecision(2) << montos[i]
+                 << fixed << setprecision(2) << porcentaje << " %\n";
+        }
+        cout << "\nTotal del dia: " << fixed << setprecision(2) << total_general << "\n";
+
+        return;
+    }
+
+    // ================= REPORTE POR TODAS LAS FECHAS =================
     const int MAX_FECHAS = 200;
     char fechas[MAX_FECHAS][12];
     double totales[MAX_FECHAS];
@@ -352,30 +370,88 @@ void reporte_por_fecha(const vector<Gasto>& gastos) {
                 totales[num_fechas] = gastos[i].monto;
                 num_fechas++;
             } else {
-                cout << "\nSe alcanzo el maximo de categorias en el reporte.";
+                cout << "\nSe alcanzo el maximo de fechas en el reporte.";
                 break;
             }
         }
     }
+
     double total_general = 0.0;
-    for (size_t i = 0; i < gastos.size(); ++i) {
-        total_general += gastos[i].monto;
-    }
+    for (size_t i = 0; i < gastos.size(); ++i) total_general += gastos[i].monto;
+
     cout << "\nREPORTE POR FECHA\n";
     cout << "======================================================\n";
-    cout << left << setw(15) << "Categoria"
+    cout << left << setw(15) << "Fecha"
          << setw(12) << "Total"
          << "Porcentaje\n";
     cout << "------------------------------------------------------\n";
     for (int i = 0; i < num_fechas; ++i) {
         double porcentaje = (totales[i] / total_general) * 100.0;
-        cout << left << setw(15) << fechas[i]<< setw(12) << fixed << setprecision(2) << totales[i]<< fixed << setprecision(2) << porcentaje << " %\n";
+        cout << left << setw(15) << fechas[i]
+             << setw(12) << fixed << setprecision(2) << totales[i]
+             << fixed << setprecision(2) << porcentaje << " %\n";
     }
     cout << "\nTotal general: " << fixed << setprecision(2) << total_general << "\n";
 }
 
+// ---------------------------------
+void reporte_por_categoria(const vector<Gasto>& gastos) {
+    borrar_pantalla();
+    if (gastos.empty()) {
+        cout << "\nNo hay gastos registrados.\n";
+        pausa();
+        return;
+    }
 
+    char categoria[20];
+    limpiar_buffer();
+    cout << "Ingrese la categoria que desea consultar: ";
+    cin.getline(categoria, sizeof(categoria));
 
+    const int MAX_GASTOS = 100;
+    char descripciones[MAX_GASTOS][50];
+    double montos[MAX_GASTOS];
+    int num_gastos = 0;
+    double total_general = 0.0;
+
+    // Filtrar gastos por categoría
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        if (strcmp(gastos[i].categoria, categoria) == 0) {
+            if (num_gastos < MAX_GASTOS) {
+                strcpy(descripciones[num_gastos], gastos[i].descripcion);
+                montos[num_gastos] = gastos[i].monto;
+                total_general += gastos[i].monto;
+                num_gastos++;
+            }
+        }
+    }
+
+    if (num_gastos == 0) {
+        cout << "\nNo se encontraron gastos para la categoria \"" << categoria << "\".\n";
+        pausa();
+        return;
+    }
+
+    // ==================== REPORTE ====================
+    cout << "\nREPORTE DE GASTOS | Categoria: " << categoria << "\n";
+    cout << "===========================================\n";
+    cout << left << setw(5) << "#"
+         << setw(30) << "Descripcion"
+         << setw(12) << "Monto"
+         << "Porcentaje\n";
+    cout << "-------------------------------------------\n";
+
+    for (int i = 0; i < num_gastos; ++i) {
+        double porcentaje = (montos[i] / total_general) * 100.0;
+        cout << left << setw(5) << i + 1
+             << setw(30) << descripciones[i]
+             << setw(12) << fixed << setprecision(2) << montos[i]
+             << fixed << setprecision(2) << porcentaje << " %\n";
+    }
+    cout << "\nTotal de la categoria: " << fixed << setprecision(2) << total_general << "\n";
+}
+
+// -----------------------------
 void reporte_por_mes(const vector<Gasto>& gastos) {
     borrar_pantalla();
     if (gastos.empty()) {
