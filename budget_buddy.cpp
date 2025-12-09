@@ -933,7 +933,205 @@ void submenu_global(const vector<Gasto>& gastos) {
         }
     }
 }
-
+void crear_grafico_off(const vector<Gasto>& gastos) {
+    borrar_pantalla();
+    
+    if (gastos.empty()) {
+        cout << "\nNo hay gastos para generar el gráfico.\n";
+        pausa();
+        return;
+    }
+    
+    // Calcular totales por categoría
+    map<string, double> totales_categoria;
+    double total_general = 0.0;
+    
+    for (const auto& g : gastos) {
+        string categoria = g.categoria;
+        transform(categoria.begin(), categoria.end(), categoria.begin(), ::tolower);
+        categoria.erase(0, categoria.find_first_not_of(" \t"));
+        categoria.erase(categoria.find_last_not_of(" \t") + 1);
+        
+        totales_categoria[categoria] += g.monto;
+        total_general += g.monto;
+    }
+    
+    // Ordenar
+    vector<pair<string, double>> categorias_ordenadas;
+    for (const auto& cat : totales_categoria) {
+        categorias_ordenadas.push_back(cat);
+    }
+    
+    sort(categorias_ordenadas.begin(), categorias_ordenadas.end(),
+         [](const pair<string, double>& a, const pair<string, double>& b) {
+             return a.second > b.second;
+         });
+    
+    // Crear archivo SVG
+    string nombre_archivo = "grafico_gastos.svg";
+    ofstream archivo(nombre_archivo);
+    
+    if (!archivo) {
+        cout << "Error al crear el archivo SVG.\n";
+        pausa();
+        return;
+    }
+    
+    // Colores para el gráfico
+    vector<string> colores = {
+        "#FF6B6B", "#4ECDC4", "#FFD166", "#06D6A0", "#118AB2",
+        "#EF476F", "#073B4C", "#7209B7", "#F72585", "#3A86FF"
+    };
+    
+    // Configuración SVG
+    const int ANCHO = 800;
+    const int ALTO = 600;
+    const int RADIO = 200;
+    const int CENTRO_X = ANCHO / 2;
+    const int CENTRO_Y = ALTO / 2;
+    
+    // Encabezado SVG
+    archivo << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+    archivo << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n";
+    archivo << "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" << ANCHO << "\" height=\"" << ALTO << "\">\n";
+    
+    // Fondo
+    archivo << "  <rect width=\"100%\" height=\"100%\" fill=\"#f8f9fa\"/>\n";
+    
+    // Título
+    archivo << "  <text x=\"" << ANCHO/2 << "\" y=\"40\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"24\" font-weight=\"bold\" fill=\"#333\">\n";
+    archivo << "    📊 Distribución de Gastos\n";
+    archivo << "  </text>\n";
+    
+    archivo << "  <text x=\"" << ANCHO/2 << "\" y=\"70\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"16\" fill=\"#666\">\n";
+    archivo << "    Total: $" << fixed << setprecision(2) << total_general << "\n";
+    archivo << "  </text>\n";
+    
+    // Calcular ángulos para el pastel
+    double angulo_actual = 0;
+    vector<double> angulos_inicio;
+    vector<double> angulos_fin;
+    
+    for (size_t i = 0; i < categorias_ordenadas.size(); i++) {
+        double porcentaje = (categorias_ordenadas[i].second / total_general);
+        double angulo = porcentaje * 360.0;
+        double angulo_fin = angulo_actual + angulo;
+        
+        angulos_inicio.push_back(angulo_actual);
+        angulos_fin.push_back(angulo_fin);
+        
+        // Convertir ángulos a radianes para coordenadas
+        double inicio_rad = (angulo_actual - 90) * M_PI / 180.0;
+        double fin_rad = (angulo_fin - 90) * M_PI / 180.0;
+        
+        // Puntos para el arco
+        double x1 = CENTRO_X + RADIO * cos(inicio_rad);
+        double y1 = CENTRO_Y + RADIO * sin(inicio_rad);
+        double x2 = CENTRO_X + RADIO * cos(fin_rad);
+        double y2 = CENTRO_Y + RADIO * sin(fin_rad);
+        
+        // Dibujar segmento del pastel
+        archivo << "  <path d=\"M " << CENTRO_X << " " << CENTRO_Y 
+                << " L " << x1 << " " << y1 
+                << " A " << RADIO << " " << RADIO << " 0 " 
+                << (angulo > 180 ? "1" : "0") << " 1 "
+                << x2 << " " << y2 
+                << " Z\" fill=\"" << colores[i % colores.size()] 
+                << "\" stroke=\"white\" stroke-width=\"2\"/>\n";
+        
+        // Etiqueta en el segmento
+        double angulo_medio = (angulo_actual + angulo_fin) / 2.0;
+        double angulo_medio_rad = (angulo_medio - 90) * M_PI / 180.0;
+        double etiqueta_distancia = RADIO * 0.7;
+        double etiqueta_x = CENTRO_X + etiqueta_distancia * cos(angulo_medio_rad);
+        double etiqueta_y = CENTRO_Y + etiqueta_distancia * sin(angulo_medio_rad);
+        
+        archivo << "  <text x=\"" << etiqueta_x << "\" y=\"" << etiqueta_y 
+                << "\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"12\" fill=\"white\" font-weight=\"bold\">\n";
+        archivo << "    " << fixed << setprecision(1) << (porcentaje * 100) << "%\n";
+        archivo << "  </text>\n";
+        
+        angulo_actual = angulo_fin;
+    }
+    
+    // Leyenda
+    archivo << "  <rect x=\"550\" y=\"100\" width=\"230\" height=\"" 
+            << (categorias_ordenadas.size() * 30 + 40) 
+            << "\" rx=\"10\" ry=\"10\" fill=\"white\" stroke=\"#ddd\" stroke-width=\"1\"/>\n";
+    
+    archivo << "  <text x=\"665\" y=\"130\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"16\" font-weight=\"bold\" fill=\"#333\">\n";
+    archivo << "    Leyenda\n";
+    archivo << "  </text>\n";
+    
+    for (size_t i = 0; i < categorias_ordenadas.size(); i++) {
+        double y_pos = 160 + i * 30;
+        double porcentaje = (categorias_ordenadas[i].second / total_general) * 100.0;
+        
+        // Cuadro de color
+        archivo << "  <rect x=\"570\" y=\"" << (y_pos - 10) 
+                << "\" width=\"15\" height=\"15\" fill=\"" 
+                << colores[i % colores.size()] << "\" stroke=\"#ddd\" stroke-width=\"1\"/>\n";
+        
+        // Nombre de categoría
+        archivo << "  <text x=\"595\" y=\"" << y_pos 
+                << "\" font-family=\"Arial\" font-size=\"12\" fill=\"#333\">\n";
+        string nombre = categorias_ordenadas[i].first;
+        if (nombre.length() > 15) nombre = nombre.substr(0, 12) + "...";
+        archivo << "    " << nombre << "\n";
+        archivo << "  </text>\n";
+        
+        // Porcentaje y monto
+        archivo << "  <text x=\"750\" y=\"" << y_pos 
+                << "\" text-anchor=\"end\" font-family=\"Arial\" font-size=\"11\" fill=\"#666\">\n";
+        archivo << "    " << fixed << setprecision(1) << porcentaje << "% ($" 
+                << fixed << setprecision(2) << categorias_ordenadas[i].second << ")\n";
+        archivo << "  </text>\n";
+    }
+    
+    // Pie de página
+    archivo << "  <text x=\"" << ANCHO/2 << "\" y=\"" << (ALTO - 20) 
+            << "\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"10\" fill=\"#999\">\n";
+    archivo << "    Generado el " << __DATE__ << " - Budget Buddy v1.0\n";
+    archivo << "  </text>\n";
+    
+    archivo << "</svg>\n";
+    archivo.close();
+    
+    cout << "\n✅ Archivo SVG creado exitosamente!\n";
+    cout << "📂 Archivo: " << nombre_archivo << "\n\n";
+    
+    // Mostrar resumen en consola
+    cout << "📊 RESUMEN DE GASTOS:\n";
+    cout << string(50, '=') << "\n";
+    for (size_t i = 0; i < categorias_ordenadas.size(); i++) {
+        double porcentaje = (categorias_ordenadas[i].second / total_general) * 100.0;
+        cout << "  " << left << setw(20) << categorias_ordenadas[i].first
+             << ": " << right << setw(6) << fixed << setprecision(1) << porcentaje << "%"
+             << "  $" << setw(10) << fixed << setprecision(2) 
+             << categorias_ordenadas[i].second << "\n";
+    }
+    cout << "\n💰 TOTAL: $" << fixed << setprecision(2) << total_general << "\n\n";
+    
+    // Preguntar si abrir
+    cout << "¿Abrir gráfico SVG? (s/n): ";
+    char respuesta;
+    cin >> respuesta;
+    limpiar_buffer();
+    
+    if (respuesta == 's' || respuesta == 'S') {
+        #ifdef _WIN32
+            system(("start \"\" \"" + nombre_archivo + "\"").c_str());
+        #elif __APPLE__
+            system(("open " + nombre_archivo).c_str());
+        #elif __linux__
+            system(("xdg-open " + nombre_archivo).c_str());
+        #else
+            cout << "Por favor, abra manualmente: " << nombre_archivo << "\n";
+        #endif
+    }
+    
+    pausa();
+}
 
 // ----------------------- MENU DE OPCIONES ---------------
 int main() {
@@ -964,7 +1162,8 @@ int main() {
     cout << " 5) Configurar presupuesto del mes activo\n";
     cout << " 6) Cambiar mes activo\n";
     cout << " 7) Reportes globales\n";
-    cout << " 8) Salir\n\n";
+    cout << " 8) Gráficos estadísticos \n";
+    cout << " 9) Salir\n\n";
     cout << "Seleccione una opcion: ";
 
     int opcion;
@@ -984,7 +1183,8 @@ int main() {
             case 5: configurar_presupuesto_mes(presupuesto); pausa(); break;
             case 6: seleccionar_mes_activo(presupuesto); pausa(); break;
             case 7: submenu_global(gastos); break;
-            case 8:
+            case 8: crear_grafico_off (gastos); break;
+            case 9:
                 cout << "Saliendo del programa... ¡Hasta pronto!\n";
                 guardar_csv(gastos);
                 pausa();
