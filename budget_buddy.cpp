@@ -11,7 +11,9 @@
 # include <algorithm>
 # include <cstdlib>
 # include <cctype>
-
+# include <map>
+# include <cmath>
+# include <string>
 // ----------------------- NAMESPACE Y ARCHIVO ----------------------
 
 using namespace std;
