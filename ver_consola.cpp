@@ -500,78 +500,96 @@ void reporte_total_general(const vector<Gasto>& gastos) {
 
 // ---------------------------------
 
-void reporte_por_categoria_mes(const vector<Gasto>& gastos) {
+void reporte_por_categoria(const vector<Gasto>& gastos) {
     borrar_pantalla();
-    if (MES_ACTIVO[0] == '\0') {
-        cout << "No hay mes activo seleccionado.\n";
+    if (gastos.empty()) {
+        cout << "\nNo hay gastos registrados.\n";
         pausa();
         return;
     }
 
-    double total_mes = 0.0;
-    const int MAX_CAT = 100;
-    char categorias[MAX_CAT][20];
-    double totales[MAX_CAT];
-    int num_categorias = 0;
+    limpiar_buffer();
+    char input_categoria[50];
+    cout << "Ingrese la categoria que desea consultar: ";
+    cin.getline(input_categoria, sizeof(input_categoria));
 
-    for (size_t i = 0; i < gastos.size(); ++i) {
-        if (strncmp(gastos[i].fecha + 3, MES_ACTIVO, 7) != 0)
-            continue;
+    // Normalizar entrada del usuario
+    auto normalize = [](const string& s) -> string {
+        size_t start = s.find_first_not_of(" \t\n\r");
+        if (start == string::npos) return "";
+        size_t end = s.find_last_not_of(" \t\n\r");
+        string t = s.substr(start, end - start + 1);
 
-        total_mes += gastos[i].monto;
-        bool encontrada = false;
-        int pos = -1;
-
-        for (int j = 0; j < num_categorias; ++j) {
-            if (strcmp(categorias[j], gastos[i].categoria) == 0) {
-                encontrada = true;
-                pos = j;
-                break;
+        string out;
+        bool last_space = false;
+        for (char ch : t) {
+            unsigned char uch = (unsigned char)ch;
+            if (isspace(uch)) {
+                if (!last_space) {
+                    out.push_back(' ');
+                    last_space = true;
+                }
+            } else {
+                out.push_back(tolower(uch));
+                last_space = false;
             }
         }
+        if (!out.empty() && out.back() == ' ')
+            out.pop_back();
+        return out;
+    };
 
-        if (encontrada) {
-            totales[pos] += gastos[i].monto;
-        } else if (num_categorias < MAX_CAT) {
-            strcpy(categorias[num_categorias], gastos[i].categoria);
-            totales[num_categorias] = gastos[i].monto;
-            num_categorias++;
-        }
-    }
-
-    if (total_mes == 0.0) {
-        cout << "\nNo hay gastos en el mes " << MES_ACTIVO << " para reportar.\n";
+    string categoria_usuario = normalize(string(input_categoria));
+    if (categoria_usuario.empty()) {
+        cout << "\nCategoria invalida.\n";
         pausa();
         return;
     }
 
-    cout << "\nREPORTE POR CATEGORIA (mes " << MES_ACTIVO << ")\n";
-    cout << "======================================================\n";
-    cout << left << setw(15) << "Categoria"
-         << setw(12) << "Total"
-         << "Porcentaje\n";
-    cout << "------------------------------------------------------\n";
+    const int MAX_GASTOS = 100;
+    char descripciones[MAX_GASTOS][50];
+    double montos[MAX_GASTOS];
+    int num_gastos = 0;
+    double total_general = 0.0;
 
-    for (int i = 0; i < num_categorias; ++i) {
-        double porcentaje = (totales[i] / total_mes) * 100.0;
-        cout << left << setw(15) << categorias[i]
-             << setw(12) << fixed << setprecision(2) << totales[i]
+    // Buscar gastos normalizando categorías guardadas también
+    for (const auto& g : gastos) {
+        string cat_guardada = normalize(string(g.categoria));
+
+        if (cat_guardada == categoria_usuario) {
+            if (num_gastos < MAX_GASTOS) {
+                strcpy(descripciones[num_gastos], g.descripcion);
+                montos[num_gastos] = g.monto;
+                total_general += g.monto;
+                num_gastos++;
+            }
+        }
+    }
+
+    if (num_gastos == 0) {
+        cout << "\nNo se encontraron gastos para la categoria ingresada.\n";
+        pausa();
+        return;
+    }
+
+    cout << "\nREPORTE DE GASTOS | Categoria: " << input_categoria << "\n";
+    cout << "===========================================\n";
+    cout << left << setw(5) << "#"
+         << setw(30) << "Descripcion"
+         << setw(12) << "Monto"
+         << "Porcentaje\n";
+    cout << "-------------------------------------------\n";
+
+    for (int i = 0; i < num_gastos; ++i) {
+        double porcentaje = (montos[i] / total_general) * 100.0;
+        cout << left << setw(5) << i + 1
+             << setw(30) << descripciones[i]
+             << setw(12) << fixed << setprecision(2) << montos[i]
              << fixed << setprecision(2) << porcentaje << " %\n";
     }
 
-    cout << "\nTotal del mes: " << fixed << setprecision(2) << total_mes << "\n";
-    if (presupuesto_mes > 0.0) {
-        double porcentaje_pres = (total_mes / presupuesto_mes) * 100.0;
-        cout << "Presupuesto del mes: " << fixed << setprecision(2)
-             << presupuesto_mes << "\n";
-        cout << "Usado del presupuesto: " << fixed << setprecision(2)
-             << porcentaje_pres << " %\n";
-        if (total_mes > presupuesto_mes) {
-            cout << "\n*** ALERTA: Se ha superado el presupuesto del mes. ***\n";
-        }
-    } else {
-        cout << "\n(No hay presupuesto definido para este mes.)\n";
-    }
+    cout << "\nTotal de la categoria: " 
+         << fixed << setprecision(2) << total_general << "\n";
 }
 
 // ---------------------------------
