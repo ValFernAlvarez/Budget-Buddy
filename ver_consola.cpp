@@ -500,7 +500,7 @@ void reporte_total_general(const vector<Gasto>& gastos) {
 
 // ---------------------------------
 
-void reporte_por_categoria(const vector<Gasto>& gastos) {
+void reporte_por_categoria_mes(const vector<Gasto>& gastos) {
     borrar_pantalla();
     if (gastos.empty()) {
         cout << "\nNo hay gastos registrados.\n";
@@ -1332,14 +1332,14 @@ int main() {
         limpiar_buffer();
 
         switch (opcion) {
-            case 1: registrar_gasto(gastos); break;
+            case 1: registrar_gasto(gastos); pausa(); break;
             case 2: mostrar_gastos_mes(gastos); pausa(); break;
             case 3: eliminar_gasto(gastos); pausa(); break;
-            case 4: submenu_analisis(gastos); break;
-            case 5: configurar_presupuesto_mes(presupuesto); break;
-            case 6: seleccionar_mes_activo(presupuesto); break;
-            case 7: submenu_global(gastos); break;
-            case 8: crear_grafico_off(gastos); break;
+            case 4: submenu_analisis(gastos); pausa(); break;
+            case 5: configurar_presupuesto_mes(presupuesto); pausa(); break;
+            case 6: seleccionar_mes_activo(presupuesto); pausa(); break;
+            case 7: submenu_global(gastos); pausa(); break;
+            case 8: crear_grafico_off(gastos); pausa(); break;
             case 9:
                 cout << "Saliendo del programa... ¡Hasta pronto!\n";
                 guardar_csv(gastos);
