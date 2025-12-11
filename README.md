@@ -70,6 +70,7 @@ monto,categoria,fecha,descripcion
 
 ## Uso
 1. Ejecutar el programa.
-2. Seleccionar una opción del menú.
-3. Registrar, mostrar, eliminar gastos o generar reportes según se necesite.
-4. Todos los cambios se guardan automáticamente en gastos.csv.
+2. Inicializar mes.
+3. Seleccionar una opción del menú.
+4. Registrar, mostrar, eliminar gastos o generar reportes según se necesite.
+5. Todos los cambios se guardan automáticamente en gastos.csv.
