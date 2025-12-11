@@ -497,7 +497,6 @@ void reporte_total_general(const vector<Gasto>& gastos) {
     cout << "=====================================\n";
     cout << "Total gastado: " << fixed << setprecision(2) << total << "\n";
 }
-
 // ---------------------------------
 
 void reporte_por_categoria_mes(const vector<Gasto>& gastos) {
@@ -508,43 +507,10 @@ void reporte_por_categoria_mes(const vector<Gasto>& gastos) {
         return;
     }
 
+    char categoria[20];
     limpiar_buffer();
-    char input_categoria[50];
     cout << "Ingrese la categoria que desea consultar: ";
-    cin.getline(input_categoria, sizeof(input_categoria));
-
-    // Normalizar entrada del usuario
-    auto normalize = [](const string& s) -> string {
-        size_t start = s.find_first_not_of(" \t\n\r");
-        if (start == string::npos) return "";
-        size_t end = s.find_last_not_of(" \t\n\r");
-        string t = s.substr(start, end - start + 1);
-
-        string out;
-        bool last_space = false;
-        for (char ch : t) {
-            unsigned char uch = (unsigned char)ch;
-            if (isspace(uch)) {
-                if (!last_space) {
-                    out.push_back(' ');
-                    last_space = true;
-                }
-            } else {
-                out.push_back(tolower(uch));
-                last_space = false;
-            }
-        }
-        if (!out.empty() && out.back() == ' ')
-            out.pop_back();
-        return out;
-    };
-
-    string categoria_usuario = normalize(string(input_categoria));
-    if (categoria_usuario.empty()) {
-        cout << "\nCategoria invalida.\n";
-        pausa();
-        return;
-    }
+    cin.getline(categoria, sizeof(categoria));
 
     const int MAX_GASTOS = 100;
     char descripciones[MAX_GASTOS][50];
@@ -552,27 +518,24 @@ void reporte_por_categoria_mes(const vector<Gasto>& gastos) {
     int num_gastos = 0;
     double total_general = 0.0;
 
-    // Buscar gastos normalizando categorías guardadas también
-    for (const auto& g : gastos) {
-        string cat_guardada = normalize(string(g.categoria));
-
-        if (cat_guardada == categoria_usuario) {
+    for (size_t i = 0; i < gastos.size(); ++i) {
+        if (strcmp(gastos[i].categoria, categoria) == 0) {
             if (num_gastos < MAX_GASTOS) {
-                strcpy(descripciones[num_gastos], g.descripcion);
-                montos[num_gastos] = g.monto;
-                total_general += g.monto;
+                strcpy(descripciones[num_gastos], gastos[i].descripcion);
+                montos[num_gastos] = gastos[i].monto;
+                total_general += gastos[i].monto;
                 num_gastos++;
             }
         }
     }
 
     if (num_gastos == 0) {
-        cout << "\nNo se encontraron gastos para la categoria ingresada.\n";
+        cout << "\nNo se encontraron gastos para la categoria \"" << categoria << "\".\n";
         pausa();
         return;
     }
 
-    cout << "\nREPORTE DE GASTOS | Categoria: " << input_categoria << "\n";
+    cout << "\nREPORTE DE GASTOS | Categoria: " << categoria << "\n";
     cout << "===========================================\n";
     cout << left << setw(5) << "#"
          << setw(30) << "Descripcion"
@@ -587,13 +550,11 @@ void reporte_por_categoria_mes(const vector<Gasto>& gastos) {
              << setw(12) << fixed << setprecision(2) << montos[i]
              << fixed << setprecision(2) << porcentaje << " %\n";
     }
+    cout << "\nTotal de la categoria: " << fixed << setprecision(2) << total_general << "\n";
+}  
 
-    cout << "\nTotal de la categoria: " 
-         << fixed << setprecision(2) << total_general << "\n";
-}
 
 // ---------------------------------
-
 void reporte_por_fecha(const vector<Gasto>& gastos) {
     borrar_pantalla();
     if (gastos.empty()) {
@@ -718,63 +679,6 @@ void reporte_por_fecha(const vector<Gasto>& gastos) {
     }
     cout << "\nTotal general: " << fixed << setprecision(2) << total_general << "\n";
 }
-
-// ---------------------------------
-
-void reporte_por_categoria(const vector<Gasto>& gastos) {
-    borrar_pantalla();
-    if (gastos.empty()) {
-        cout << "\nNo hay gastos registrados.\n";
-        pausa();
-        return;
-    }
-
-    char categoria[20];
-    limpiar_buffer();
-    cout << "Ingrese la categoria que desea consultar: ";
-    cin.getline(categoria, sizeof(categoria));
-
-    const int MAX_GASTOS = 100;
-    char descripciones[MAX_GASTOS][50];
-    double montos[MAX_GASTOS];
-    int num_gastos = 0;
-    double total_general = 0.0;
-
-    for (size_t i = 0; i < gastos.size(); ++i) {
-        if (strcmp(gastos[i].categoria, categoria) == 0) {
-            if (num_gastos < MAX_GASTOS) {
-                strcpy(descripciones[num_gastos], gastos[i].descripcion);
-                montos[num_gastos] = gastos[i].monto;
-                total_general += gastos[i].monto;
-                num_gastos++;
-            }
-        }
-    }
-
-    if (num_gastos == 0) {
-        cout << "\nNo se encontraron gastos para la categoria \"" << categoria << "\".\n";
-        pausa();
-        return;
-    }
-
-    cout << "\nREPORTE DE GASTOS | Categoria: " << categoria << "\n";
-    cout << "===========================================\n";
-    cout << left << setw(5) << "#"
-         << setw(30) << "Descripcion"
-         << setw(12) << "Monto"
-         << "Porcentaje\n";
-    cout << "-------------------------------------------\n";
-
-    for (int i = 0; i < num_gastos; ++i) {
-        double porcentaje = (montos[i] / total_general) * 100.0;
-        cout << left << setw(5) << i + 1
-             << setw(30) << descripciones[i]
-             << setw(12) << fixed << setprecision(2) << montos[i]
-             << fixed << setprecision(2) << porcentaje << " %\n";
-    }
-    cout << "\nTotal de la categoria: " << fixed << setprecision(2) << total_general << "\n";
-}  
-
 // ---------------------------------
 
 void reporte_por_mes(const vector<Gasto>& gastos) {
@@ -1056,7 +960,7 @@ void submenu_analisis(const vector<Gasto>& gastos) {
         limpiar_buffer();
 
         switch (op) {
-            case 1: reporte_por_categoria_mes(gastos); pausa(); break;
+            case 1: reporte_por_categoria(gastos); pausa(); break;
             case 2: reporte_por_dia(gastos); pausa(); break;
             case 3: reporte_por_semana(gastos); pausa(); break;
             case 0: return;
